@@ -34,13 +34,19 @@ def overdamped_langevin(logdensity_grad_fn):
 
     def one_step(rng_key, state: DiffusionState, step_size: float, batch: tuple = ()):
         position, _, logdensity_grad = state
+        jax.debug.print("position: {x}", x=position)
+        jax.debug.print("logdensity_grad: {x}", x=logdensity_grad)
         noise = generate_gaussian_noise(rng_key, position)
+        jax.debug.print("noise: {x}", x=noise)
+        mu = position + 0.5 * step_size * logdensity_grad
+        jax.debug.print("mu: {x}", x=mu)
         position = jax.tree_util.tree_map(
             lambda p, g, n: p + step_size * g + jnp.sqrt(2 * step_size) * n,
             position,
             logdensity_grad,
             noise,
         )
+        jax.debug.print("position: {x}", x=position)
 
         logdensity, logdensity_grad = logdensity_grad_fn(position, *batch)
         return DiffusionState(position, logdensity, logdensity_grad)

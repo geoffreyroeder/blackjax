@@ -206,8 +206,11 @@ def compute_asymmetric_acceptance_ratio(transition_energy_fn: Callable) -> Calla
         **energy_params,
     ) -> float:
         new_energy = transition_energy_fn(initial_state, state, **energy_params)
+        jax.debug.print("new_energy: {x}", x=new_energy)
         prev_energy = transition_energy_fn(state, initial_state, **energy_params)
+        jax.debug.print("prev_energy: {x}", x=prev_energy)
         log_p_accept = safe_energy_diff(prev_energy, new_energy)
+        jax.debug.print("log_p_accept: {x}", x=log_p_accept)
         return log_p_accept
 
     return compute_acceptance_ratio
@@ -225,6 +228,7 @@ def static_binomial_sampling(
 
     """
     p_accept = jnp.clip(jnp.exp(log_p_accept), max=1)
+    jax.debug.print("p_accept: {x}", x=p_accept)
     do_accept = jax.random.bernoulli(rng_key, p_accept)
     info = do_accept, p_accept, None
     return (
