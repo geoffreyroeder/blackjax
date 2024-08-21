@@ -15,7 +15,12 @@ from blackjax.types import Array, ArrayLikeTree, ArrayTree, PRNGKey
 
 
 @partial(jit, static_argnames=("precision",), inline=True)
-def linear_map(diag_or_dense_a, b, *, precision="highest"):
+def linear_map(
+    diag_or_dense_a: Union[float, Array],
+    b: Array,
+    *,
+    precision: str = "highest"
+) -> Array:
     """Perform a linear map of the form y = Ax.
 
     Dispatch matrix multiplication to either jnp.dot or jnp.multiply.
@@ -33,7 +38,7 @@ def linear_map(diag_or_dense_a, b, *, precision="highest"):
     Parameters
     ----------
     diag_or_dense_a:
-        A diagonal (1d vector) or dense matrix (2d square matrix).
+        A scalar, diagonal (1d vector) or dense matrix (2d square matrix).
     b:
         A vector.
     precision:
@@ -45,7 +50,7 @@ def linear_map(diag_or_dense_a, b, *, precision="highest"):
         The result vector of the matrix multiplication.
     """
     dtype = jnp.result_type(diag_or_dense_a.dtype, b.dtype)
-    diag_or_dense_a = diag_or_dense_a.astype(dtype)
+    diag_or_dense_a = jnp.array(diag_or_dense_a).astype(dtype)
     b = b.astype(dtype)
     ndim = jnp.ndim(diag_or_dense_a)
 
