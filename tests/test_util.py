@@ -4,7 +4,11 @@ import jax.numpy as jnp
 from absl.testing import absltest, parameterized
 
 import blackjax
-from blackjax.util import linear_map, run_inference_algorithm, store_only_expectation_values
+from blackjax.util import (
+    linear_map,
+    run_inference_algorithm,
+    store_only_expectation_values,
+)
 
 
 class RunInferenceAlgorithmTest(chex.TestCase):
@@ -105,15 +109,17 @@ class RunInferenceAlgorithmTest(chex.TestCase):
     def logdensity_fn(x):
         return -0.5 * jnp.sum(jnp.square(x))
 
+
 class LinearMapTest(chex.TestCase):
     def test_linear_map_with_scalar(self):
         scalar_a = 2.0
         vector_b = jnp.array([1.0, 2.0, 3.0])
-        
+
         result = linear_map(scalar_a, vector_b)
-        
+
         expected = jnp.array([2.0, 4.0, 6.0])
         chex.assert_trees_all_close(result, expected)
+
 
 if __name__ == "__main__":
     absltest.main()

@@ -78,6 +78,9 @@ def build_kernel():
 
     def transition_energy(state, new_state, step_size):
         """Transition energy to go from `state` to `new_state`"""
+        jax.debug.print("state: {x}", x=state)
+        jax.debug.print("new_state: {x}", x=new_state)
+        jax.debug.print("step_size: {x}", x=step_size)
         theta = jax.tree_util.tree_map(
             lambda x, new_x, g: x - new_x - step_size * g,
             state.position,
@@ -86,7 +89,10 @@ def build_kernel():
         )
         theta_dot = jax.tree_util.tree_reduce(
             operator.add, jax.tree_util.tree_map(lambda x: jnp.sum(x * x), theta)
-        )
+        )  # theta_dot = theta^T * theta
+        jax.debug.print("theta: {x}", x=theta)
+        jax.debug.print("theta_dot: {x}", x=theta_dot)
+        jax.debug.print("new_state.logdensity: {x}", x=new_state.logdensity)
         return -new_state.logdensity + 0.25 * (1.0 / step_size) * theta_dot
 
     compute_acceptance_ratio = proposal.compute_asymmetric_acceptance_ratio(
@@ -98,6 +104,8 @@ def build_kernel():
         rng_key: PRNGKey, state: MALAState, logdensity_fn: Callable, step_size: float
     ) -> tuple[MALAState, MALAInfo]:
         """Generate a new sample with the MALA kernel."""
+        jax.debug.print("state: {x}", x=state)
+        jax.debug.print("step_size: {x}", x=step_size)
         grad_fn = jax.value_and_grad(logdensity_fn)
         integrator = diffusions.overdamped_langevin(grad_fn)
 
@@ -105,10 +113,13 @@ def build_kernel():
 
         new_state = integrator(key_integrator, state, step_size)
         new_state = MALAState(*new_state)
+        jax.debug.print("new_state: {x}", x=new_state)
 
         log_p_accept = compute_acceptance_ratio(state, new_state, step_size=step_size)
+        jax.debug.print("log_p_accept: {x}", x=log_p_accept)
         accepted_state, info = sample_proposal(key_rmh, log_p_accept, state, new_state)
         do_accept, p_accept, _ = info
+        jax.debug.print("do_accept: {x}", x=do_accept)
 
         info = MALAInfo(p_accept, do_accept)
 
