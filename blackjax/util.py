@@ -49,6 +49,7 @@ def linear_map(
     -------
         The result vector of the matrix multiplication.
     """
+    diag_or_dense_a = jnp.array(diag_or_dense_a)
     dtype = jnp.result_type(diag_or_dense_a.dtype, b.dtype)
     diag_or_dense_a = jnp.array(diag_or_dense_a).astype(dtype)
     b = b.astype(dtype)
