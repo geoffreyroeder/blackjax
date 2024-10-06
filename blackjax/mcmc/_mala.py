@@ -41,41 +41,22 @@ class MALAState(NamedTuple):
     logdensity_grad: ArrayTree
 
 
-# class MALAInfo(NamedTuple):
-#     """Additional information on the MALA transition.
-
-#     This additional information can be used for debugging or computing
-#     diagnostics.
-
-#     acceptance_rate
-#         The acceptance rate of the transition.
-#     is_accepted
-#         Whether the proposed position was accepted or the original position
-#         was returned.
-
-#     """
-
-#     acceptance_rate: float
-#     is_accepted: bool
-    
 class MALAInfo(NamedTuple):
-    """Information on the MALA transition including the proposed state.
-    
-    This additional information can be used for debugging, computing
-    diagnostics, or marginalizing out the Metropolis-Hastings adjustment. 
-    
+    """Additional information on the MALA transition.
+
+    This additional information can be used for debugging or computing
+    diagnostics.
+
     acceptance_rate
         The acceptance rate of the transition.
     is_accepted
         Whether the proposed position was accepted or the original position
         was returned.
-    proposed_position
-        The position proposed during the MALA transition.
+
     """
+
     acceptance_rate: float
     is_accepted: bool
-    position: ArrayTree
-    proposed_position: ArrayTree
 
 
 def init(position: ArrayLikeTree, logdensity_fn: Callable) -> MALAState:
@@ -129,7 +110,7 @@ def build_kernel():
         accepted_state, info = sample_proposal(key_rmh, log_p_accept, state, new_state)
         do_accept, p_accept, _ = info
 
-        info = MALAInfo(p_accept, do_accept, state.position, new_state.position)
+        info = MALAInfo(p_accept, do_accept)
 
         return accepted_state, info
 
