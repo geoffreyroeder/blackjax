@@ -17,6 +17,7 @@ from .mcmc import elliptical_slice as _elliptical_slice
 from .mcmc import ghmc as _ghmc
 from .mcmc import hmc as _hmc
 from .mcmc import mala as _mala
+from .mcmc import remala as _remala
 from .mcmc import marginal_latent_gaussian
 from .mcmc import mclmc as _mclmc
 from .mcmc import nuts as _nuts
@@ -91,6 +92,7 @@ def generate_top_level_api_from(module):
 
 # MCMC
 hmc = generate_top_level_api_from(_hmc)
+# cld = generate_top_level_api_from(_cld)
 nuts = generate_top_level_api_from(_nuts)
 rmh = GenerateSamplingAPI(rmh_as_top_level_api, random_walk.init, random_walk.build_rmh)
 irmh = GenerateSamplingAPI(
@@ -99,6 +101,7 @@ irmh = GenerateSamplingAPI(
 dynamic_hmc = generate_top_level_api_from(_dynamic_hmc)
 rmhmc = generate_top_level_api_from(_rmhmc)
 mala = generate_top_level_api_from(_mala)
+remala = generate_top_level_api_from(_remala)
 mgrad_gaussian = generate_top_level_api_from(marginal_latent_gaussian)
 orbital_hmc = generate_top_level_api_from(periodic_orbital)
 

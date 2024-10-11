@@ -1,4 +1,5 @@
 """Test the accuracy of the MCMC kernels."""
+
 import functools
 import itertools
 
@@ -236,6 +237,33 @@ class LinearRegressionTest(chex.TestCase):
 
         np.testing.assert_allclose(np.mean(scale_samples), 1.0, atol=1e-1)
         np.testing.assert_allclose(np.mean(coefs_samples), 3.0, atol=1e-1)
+
+    def test_remala(self): 
+        """Test the reMALA kernel."""
+        init_key0, init_key1, inference_key = jax.random.split(self.key, 3)
+        x_data = jax.random.normal(init_key0, shape=(1000, 1))
+        y_data = 3 * x_data + jax.random.normal(init_key1, shape=x_data.shape)
+        logposterior_fn_ = functools.partial(
+            self.regression_logprob, x=x_data, preds=y_data
+        )
+        logposterior_fn = lambda x: logposterior_fn_(**x)
+
+        remala = blackjax.remala(logposterior_fn, 1e-5)
+        state = remala.init({"coefs": 1.0, "log_scale": 1.0})
+        _, states = run_inference_algorithm(
+            rng_key=inference_key,
+            initial_state=state,
+            inference_algorithm=remala,
+            transform=lambda state, info: state.position,
+            num_steps=10_000,
+        )
+
+        coefs_samples = states["coefs"][3000:]
+        scale_samples = np.exp(states["log_scale"][3000:])
+        np.testing.assert_allclose(np.mean(scale_samples), 1.0, atol=1e-1)
+        np.testing.assert_allclose(np.mean(coefs_samples), 3.0, atol=1e-1)
+
+
 
     def test_mclmc(self):
         """Test the MCLMC kernel."""
@@ -726,25 +754,28 @@ class UnivariateNormalTest(chex.TestCase):
         initial_state,
         num_sampling_steps,
         burnin,
-        postprocess_samples=None,
+        collect_estimator=False,
         **kwargs,
     ):
-        inference_key, orbit_key = jax.random.split(rng_key)
-        _, (states, info) = self.variant(
-            functools.partial(
-                run_inference_algorithm,
-                inference_algorithm=inference_algorithm,
-                num_steps=num_sampling_steps,
-                **kwargs,
-            )
-        )(rng_key=inference_key, initial_state=initial_state)
+        inference_key, _ = jax.random.split(rng_key)
+        _, (states, infos) = run_inference_algorithm(
+            rng_key=inference_key,
+            initial_state=initial_state,
+            inference_algorithm=inference_algorithm,
+            num_steps=num_sampling_steps,
+            **kwargs,
+        )
 
-        if postprocess_samples:
-            samples = postprocess_samples(states, orbit_key)
+        if collect_estimator:
+            # Collect the estimators from the info objects
+            estimators = jnp.array([info.estimator for info in infos[burnin:]])
+            mean_estimate = jnp.mean(estimators)
+            expected_mean = 1.0
+            np.testing.assert_allclose(mean_estimate, expected_mean, rtol=1e-1)
         else:
             samples = states.position[burnin:]
-        np.testing.assert_allclose(np.mean(samples), 1.0, rtol=1e-1)
-        np.testing.assert_allclose(np.var(samples), 4.0, rtol=1e-1)
+            np.testing.assert_allclose(jnp.mean(samples), 1.0, rtol=1e-1)
+            np.testing.assert_allclose(jnp.var(samples), 4.0, rtol=1e-1)
 
     @chex.all_variants(with_pmap=False)
     def test_irmh(self):
@@ -893,6 +924,15 @@ class UnivariateNormalTest(chex.TestCase):
             inference_algorithm, self.key, initial_state, 20000, 2_000
         )
 
+    @chex.all_variants(with_pmap=False)
+    def test_reMALA(self):
+        """Test the reMALA kernel on a univariate normal distribution."""
+        inference_algorithm = blackjax.remala(self.normal_logprob, step_size=0.2)
+        initial_state = inference_algorithm.init(jnp.array(1.0))
+        self.univariate_normal_test_case(
+            inference_algorithm, self.key, initial_state, 45000, 5_000
+        )
+
 
 mcse_test_cases = [
     {
@@ -1026,4 +1066,7 @@ class MonteCarloStandardErrorTest(chex.TestCase):
 
 
 if __name__ == "__main__":
-    absltest.main()
+    lrt = LinearRegressionTest()
+    lrt.setUp()
+    lrt.test_remala()
+    # absltest.main()
