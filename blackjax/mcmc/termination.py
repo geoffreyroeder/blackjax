@@ -37,8 +37,8 @@ def iterative_uturn_numpyro(is_turning: CheckTurning):
         return IterativeUTurnState(
             jnp.zeros((max_num_doublings, num_dims)),
             jnp.zeros((max_num_doublings, num_dims)),
-            0,
-            0,
+            jnp.asarray(0, dtype=jnp.int32),
+            jnp.asarray(0, dtype=jnp.int32),
         )
 
     def update_criterion_state(

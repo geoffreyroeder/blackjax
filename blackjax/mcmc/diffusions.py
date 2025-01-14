@@ -41,8 +41,44 @@ def overdamped_langevin(logdensity_grad_fn):
             logdensity_grad,
             noise,
         )
-
         logdensity, logdensity_grad = logdensity_grad_fn(position, *batch)
         return DiffusionState(position, logdensity, logdensity_grad)
+
+    return one_step
+
+class CriticallyDampedState(NamedTuple):
+    position: ArrayTree
+    momentum: ArrayTree
+    logdensity: float
+    logdensity_grad: ArrayTree
+
+def criticallydamped_langevin(logdensity_grad_fn, mass=1.0, gamma=2.0):
+    """Euler-Maruyama solver for critically damped Langevin diffusion."""
+
+    def one_step(rng_key, state: CriticallyDampedState, step_size: float, batch: tuple = ()):
+        position, momentum, _, logdensity_grad = state
+        
+        # Generate noise for the momentum update
+        noise = generate_gaussian_noise(rng_key, momentum)
+
+        # Update momentum
+        momentum = jax.tree_util.tree_map(
+            lambda p, g, n: p - step_size * g - gamma * p * step_size + jnp.sqrt(2 * gamma * mass * step_size) * n,
+            momentum,
+            logdensity_grad,
+            noise,
+        )
+
+        # Update position
+        position = jax.tree_util.tree_map(
+            lambda q, p: q + step_size * p / mass,
+            position,
+            momentum
+        )
+
+        # Compute new log-density and its gradient
+        logdensity, logdensity_grad = logdensity_grad_fn(position, *batch)
+        
+        return CriticallyDampedState(position, momentum, logdensity, logdensity_grad)
 
     return one_step
